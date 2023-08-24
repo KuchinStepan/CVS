@@ -15,10 +15,7 @@ class CloneVersionSystem:
         self.cvs_tree = None
         self.saved_cvs = None
         self.cvs_active = False
-        self.commands = {
-            'stop': self.stop,
-            '0': self.stop
-        }
+        self.commit_index = None
 
     @property
     def saver_directory(self):
@@ -72,6 +69,8 @@ class CloneVersionSystem:
                 self.stop()
             case['init']:
                 self.init()
+            case['add', '.']:
+                self.commit_index = self.cvs_tree.create_commit_index_with_all()
             case['commit']:
                 self.commit()
             case['commit', '-m', message]:
