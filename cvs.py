@@ -4,8 +4,7 @@ import os
 import pickle
 
 
-CVS_PATH = '.cvs'
-SAVER_FILE = f'{CVS_PATH}\\saver.pickle'
+SAVER_FILE_PATH = f'{CVS_PATH}\\saver.pickle'
 
 
 def _delete_last_comma(x):
@@ -26,7 +25,7 @@ class CloneVersionSystem:
 
     @property
     def saver_directory(self):
-        return f'{self.main_folder}\\{SAVER_FILE}'
+        return f'{self.main_folder}\\{SAVER_FILE_PATH}'
 
     def reload_saver(self):
         if not os.path.exists(self.saver_directory):
@@ -43,20 +42,30 @@ class CloneVersionSystem:
         self.save_in_saver()
         self.running = False
 
+    def _create_folders(self):
+        path = f'{self.main_folder}\\{CVS_PATH}'
+        os.mkdir(path)
+        path = f'{self.main_folder}\\{COMMITS_PATH}'
+        os.mkdir(path)
+
     def init(self):
         if self.cvs_active:
             print('В текущей директории уже создана система контроля версий')
             return
         else:
-            path = f'{self.main_folder}\\{CVS_PATH}'
-            os.mkdir(path)
+            self._create_folders()
             self.cvs_tree = TreeCVS(self.main_folder)
             print('CVS создан')
             self.cvs_active = True
 
     def commit(self, message=None):
+        if self.commit_index is None:
+            print('Не добавлены изменения. Используйте команду \'add\'')
+            return
         if message is None:
-            print('Коммит беб создан')
+            name = self.cvs_tree.next_commit_folder_name
+            self.cvs_tree.create_commit(name, self.commit_index)
+            print(f'Коммит {name} создан')
         else:
             parsed_message = message.split('\'')
             if len(parsed_message) != 3 \
@@ -65,7 +74,18 @@ class CloneVersionSystem:
                 return
             else:
                 message = parsed_message[1]
+                self.cvs_tree.create_commit(message, self.commit_index)
                 print(f'Коммит {message} создан')
+        self.commit_index = None
+
+    def add_by_names(self, names):
+        names = list(map(_delete_last_comma, names))
+        try:
+            if self.commit_index is None:
+                self.commit_index = CommitIndex()
+            self.commit_index = self.cvs_tree.update_commit_index_by_names(self.commit_index, names)
+        except FileNotFoundError as e:
+            print(f'{e.filename} не найден')
 
     def do_command(self, command):
         if command != 'init' and not self.cvs_active:
@@ -79,13 +99,7 @@ class CloneVersionSystem:
             case['add', '.']:
                 self.commit_index = self.cvs_tree.create_commit_index_with_all()
             case['add', *names]:
-                names = list(map(_delete_last_comma, names))
-                try:
-                    if self.commit_index is None:
-                        self.commit_index = CommitIndex()
-                    self.commit_index = self.cvs_tree.update_commit_index_by_names(self.commit_index, names)
-                except FileNotFoundError as e:
-                    print(f'{e.filename} не найден')
+                self.add_by_names(names)
             case['commit']:
                 self.commit()
             case['commit', '-m', message]:

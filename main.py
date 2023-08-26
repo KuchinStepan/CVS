@@ -3,11 +3,12 @@ from cvs import CloneVersionSystem
 
 def main():
     cvs = CloneVersionSystem()
-    cvs.run()
-    # try:
-    #     cvs.run()
-    # except KeyboardInterrupt:
-    #     cvs.save_in_saver()
+    try:
+        cvs.run()
+    except KeyboardInterrupt:
+        if cvs.cvs_active:
+            cvs.save_in_saver()
+        raise
 
 
 if __name__ == '__main__':
