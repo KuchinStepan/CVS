@@ -53,8 +53,19 @@ class TreeCVS:
         com_index.deleted = self.find_deleted_files(all_files)
         return com_index
 
-    def update_commit_index_by_names(self):
-        pass
+    def update_commit_index_by_names(self, commit_index, names):
+        full_index = self.create_commit_index_with_all()
+        for name in names:
+            if name not in commit_index:
+                if name in full_index.new:
+                    commit_index.new.append(name)
+                elif name in full_index.deleted:
+                    commit_index.deleted.append(name)
+                elif name in full_index.edited:
+                    commit_index.edited.append(name)
+                else:
+                    raise FileNotFoundError(name, name, name)
+        return commit_index
 
     def checkout_branch(self, branch_name):
         """Делает переход на ветку, при этом так же переходит на последний коммит в этой ветке"""
@@ -87,16 +98,7 @@ class CommitIndex:
         self.edited = []
 
     def __contains__(self, item):
-        for file in self.deleted:
-            if file == item:
-                return True
-        for file in self.new:
-            if file == item:
-                return True
-        for file in self.edited:
-            if file == item:
-                return True
-        return False
+        return item in self.deleted or item in self.new or item in self.edited
 
 
 class CommitCVS:

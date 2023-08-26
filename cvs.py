@@ -8,6 +8,13 @@ CVS_PATH = '.cvs'
 SAVER_FILE = f'{CVS_PATH}\\saver.pickle'
 
 
+def _delete_last_comma(x):
+    if len(x) > 0 and x[-1] == ',':
+        return x[:-1]
+    else:
+        return x
+
+
 class CloneVersionSystem:
     def __init__(self):
         self.running = False
@@ -71,6 +78,14 @@ class CloneVersionSystem:
                 self.init()
             case['add', '.']:
                 self.commit_index = self.cvs_tree.create_commit_index_with_all()
+            case['add', *names]:
+                names = list(map(_delete_last_comma, names))
+                try:
+                    if self.commit_index is None:
+                        self.commit_index = CommitIndex()
+                    self.commit_index = self.cvs_tree.update_commit_index_by_names(self.commit_index, names)
+                except FileNotFoundError as e:
+                    print(f'{e.filename} не найден')
             case['commit']:
                 self.commit()
             case['commit', '-m', message]:
