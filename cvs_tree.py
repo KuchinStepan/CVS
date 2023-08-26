@@ -77,15 +77,15 @@ class TreeCVS:
                     raise FileNotFoundError(name, name, name)
         return commit_index
 
-    def create_commit(self, name, commit_index, initial=False):
-        if not initial:
+    def create_commit(self, name, commit_index, detached=False):
+        if not detached:
             previous = self.current_commit
         else:
             previous = None
         com_path = f'{self.path}\\{COMMITS_PATH}\\{self.next_commit_folder_name}'
         os.mkdir(com_path)
         commit = CommitCVS(name, commit_index, self.path, com_path, previous)
-        if not initial:
+        if not detached:
             self.cur_branch.add_commit(commit)
 
         self.commits_count += 1
@@ -157,7 +157,7 @@ class CommitCVS:
     def load_files_in_folder(self, original_folder):
         for file in self.index.new + self.index.edited:
             old_path = f'{original_folder}\\{file}'
-            shutil.copy(old_path, self.files_and_paths[file])
+            shutil.copy2(old_path, self.files_and_paths[file])
 
     def set_files_dict_without_previous(self, folder):
         for file in self.index.new:

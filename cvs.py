@@ -2,6 +2,10 @@ from cvs_dialogs import *
 from cvs_tree import *
 import os
 import pickle
+import colorama
+
+
+colorama.init(autoreset=True)
 
 
 SAVER_FILE_PATH = f'{CVS_PATH}\\saver.pickle'
@@ -78,6 +82,19 @@ class CloneVersionSystem:
                 print(f'Коммит {message} создан')
         self.commit_index = None
 
+    def status(self):
+        all_changes = set(self.cvs_tree.create_commit_index_with_all().all_files)
+        if len(all_changes) == 0:
+            print('Нет новых изменений')
+        if self.commit_index is None:
+            added_changes = set()
+        else:
+            added_changes = set(self.commit_index.all_files)
+        for file in all_changes.difference(added_changes):
+            print(colorama.Fore.RED + file)
+        for file in added_changes:
+            print(colorama.Fore.GREEN + file)
+
     def add_by_names(self, names):
         names = list(map(_delete_last_comma, names))
         try:
@@ -96,6 +113,8 @@ class CloneVersionSystem:
                 self.stop()
             case['init']:
                 self.init()
+            case['status']:
+                self.status()
             case['add', '.']:
                 self.commit_index = self.cvs_tree.create_commit_index_with_all()
             case['add', *names]:
@@ -117,5 +136,5 @@ class CloneVersionSystem:
             self.cvs_tree = self.saved_cvs
 
         while self.running:
-            command = input()
+            command = input('>>> ')
             self.do_command(command)
