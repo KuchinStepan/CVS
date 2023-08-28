@@ -1,6 +1,6 @@
 from cvs_dialogs import *
 from cvs_tree import *
-from detached_head_error import DetachedHeadError
+from detached_head_error import DetachedHeadError, CommitNotFoundError
 import os
 import pickle
 import colorama
@@ -70,25 +70,7 @@ class CloneVersionSystem:
             self.cvs_tree = TreeCVS(self.main_folder)
             print('CVS создан')
             self.cvs_active = True
-
-    def commit(self, message=None):
-        if self.commit_index is None:
-            print('Не добавлены изменения. Используйте команду \'add\'')
-            return
-        if message is None:
-            message = self.cvs_tree.next_commit_folder_name
-        else:
-            try:
-                message = _parse_message(message)
-            except ValueError:
-                print('Неверно указано сообщение к коммиту')
-                return
-        try:
-            self.cvs_tree.create_commit(message, self.commit_index)
-            print(f'Коммит {message} создан')
-            self.commit_index = None
-        except DetachedHeadError as e:
-            print(e)
+            self.save_in_saver()
 
     def status(self):
         all_changes = set(self.cvs_tree.create_commit_index_with_all().all_files)
@@ -111,6 +93,32 @@ class CloneVersionSystem:
             self.commit_index = self.cvs_tree.update_commit_index_by_names(self.commit_index, names)
         except FileNotFoundError as e:
             print(f'{e.filename} не найден')
+
+    def commit(self, message=None):
+        if self.commit_index is None:
+            print('Не добавлены изменения. Используйте команду \'add\'')
+            return
+        if message is None:
+            message = self.cvs_tree.next_commit_folder_name
+        else:
+            try:
+                message = _parse_message(message)
+            except ValueError:
+                print('Неверно указано сообщение к коммиту')
+                return
+        try:
+            self.cvs_tree.create_commit(message, self.commit_index)
+            print(f'Коммит {message} создан')
+            self.save_in_saver()
+            self.commit_index = None
+        except DetachedHeadError as e:
+            print(e)
+
+    def checkout_commit(self, name):
+        try:
+            self.cvs_tree.checkout_commit(name)
+        except CommitNotFoundError as e:
+            print(e)
 
     def do_command(self, command):
         if command != 'init' and not self.cvs_active:

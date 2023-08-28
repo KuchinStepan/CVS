@@ -1,4 +1,4 @@
-from detached_head_error import DetachedHeadError
+from detached_head_error import DetachedHeadError, CommitNotFoundError
 import os
 import shutil
 
@@ -22,6 +22,17 @@ def get_all_files(path, directory=''):
             result_list += get_all_files(path, file)
             result_list.remove(file)
     return result_list
+
+
+def create_folders_from_dir(file_name: str, path):
+    split_name = file_name.split('\\')
+    for i in range(len(split_name)):
+        new_folder = '\\'.join(split_name[:i+1])
+        folder = f'{path}\\{new_folder}'
+        if os.path.exists(folder):
+            continue
+        else:
+            os.mkdir(folder)
 
 
 class TreeCVS:
@@ -81,7 +92,7 @@ class TreeCVS:
     def create_commit(self, name, commit_index, initial=False):
         if not initial:
             if not self.cur_branch.last_commit_taken:
-                raise DetachedHeadError
+                raise DetachedHeadError(name)
             previous = self.current_commit
         else:
             previous = None
@@ -93,6 +104,17 @@ class TreeCVS:
 
         self.commits_count += 1
         return commit
+
+    def checkout_commit(self, name):
+        if name in self.cur_branch:
+            self.cur_branch.checkout_commit(name)
+            return
+        for branch in self.branches:
+            if name in branch:
+                branch.checkout_commit(name)
+                self.cur_branch = branch
+                return
+        raise CommitNotFoundError(name)
 
     def checkout_branch(self, branch_name):
         """Делает переход на ветку, при этом так же переходит на последний коммит в этой ветке"""
@@ -106,14 +128,6 @@ class TreeCVS:
         if i == -1:
             return None
         return self.current_commit
-
-    def checkout_commit(self, name):
-        for branch in self.branches:
-            if branch.contains(name):
-                commit = branch.checkout_commit(name)
-                self.cur_branch = branch
-                return commit
-        return None
 
 
 class CommitIndex:
@@ -151,17 +165,6 @@ class CommitCVS:
         self.create_folders(saver_folder)
         self.load_files_in_folder(original_path)
 
-    def create_folders(self, folder):
-        dirs = list(self.index.get_dirs())
-        dirs.sort(key=lambda x: len(x))
-        for path in dirs:
-            os.mkdir(f'{folder}\\{path}')
-
-    def load_files_in_folder(self, original_folder):
-        for file in self.index.new + self.index.edited:
-            old_path = f'{original_folder}\\{file}'
-            shutil.copy2(old_path, self.files_and_paths[file])
-
     def set_files_dict_without_previous(self, folder):
         for file in self.index.new:
             self.files_and_paths[file] = f'{folder}\\{file}'
@@ -177,44 +180,56 @@ class CommitCVS:
             if file in self.files_and_paths:
                 self.files_and_paths.pop(file)
 
+    def create_folders(self, folder):
+        dirs = self.index.get_dirs()
+        for path in dirs:
+            create_folders_from_dir(path, folder)
+
+    def load_files_in_folder(self, original_folder):
+        for file in self.index.new + self.index.edited:
+            old_path = f'{original_folder}\\{file}'
+            shutil.copy2(old_path, self.files_and_paths[file])
+
+    def checkout(self):
+        pass
+
 
 class BranchCVS:
     def __init__(self, name, root: CommitCVS):
         self.name = name
         self.root = root
         self.commits = [root]
-        self.current = root
         self.current_number = 0
 
     @property
+    def current_commit(self):
+        return self.commits[self.current_number]
+
+    @property
     def last_commit_taken(self):
-        return self.current_number == len(self.commits)
+        return self.current_number == len(self.commits) - 1
 
     def add_commit(self, commit, checkout=True):
         self.commits.append(commit)
         if checkout:
-            self.current = commit
             self.current_number += 1
 
-    def contains(self, commit_name):
+    def __contains__(self, item):
         for c in self.commits:
-            if c.name == commit_name:
+            if c.name == item:
                 return True
         return False
 
     def checkout_commit(self, commit_name):
-        i = -1
-        for j in range(len(self.commits)):
-            if self.commits[j] == commit_name:
-                i = j
+        if commit_name == self.current_commit.name:
+            return
+        for i in range(len(self.commits)):
+            if self.commits[i] == commit_name:
                 self.current_number = i
-                self.current = self.commits[i]
-                break
-        if i != -1:
-            return self.current
-        return None
+                self.current_commit.checkout()
+                return
+        raise CommitNotFoundError(commit_name)
 
     def checkout_last(self):
         self.current_number = len(self.commits) - 1
-        self.current = self.commits[self.current_number]
         return self.current
