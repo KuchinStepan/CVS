@@ -139,6 +139,8 @@ class CloneVersionSystem:
                 self.commit()
             case['commit', '-m', message]:
                 self.commit(message)
+            case['checkout', name]:
+                self.checkout_commit(name)
             case _:
                 print('Неверно введена команда')
 

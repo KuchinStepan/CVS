@@ -24,8 +24,8 @@ def get_all_files(path, directory=''):
     return result_list
 
 
-def create_folders_from_dir(file_name: str, path):
-    split_name = file_name.split('\\')
+def create_folders_from_dir(directory: str, path):
+    split_name = directory.split('\\')
     for i in range(len(split_name)):
         new_folder = '\\'.join(split_name[:i+1])
         folder = f'{path}\\{new_folder}'
@@ -40,7 +40,7 @@ class TreeCVS:
         self.path = path
         self.commits_count = 0
         commit_index = self.create_commit_index_with_all(True)
-        initial_commit = self.create_commit('Initial commit', commit_index, True)
+        initial_commit = self.create_commit('Initial_commit', commit_index, True)
         self.main = BranchCVS('main', initial_commit)
         self.cur_branch = self.main
         self.branches = [self.main]
@@ -107,11 +107,11 @@ class TreeCVS:
 
     def checkout_commit(self, name):
         if name in self.cur_branch:
-            self.cur_branch.checkout_commit(name)
+            self.cur_branch.checkout_commit(name, self.current_commit)
             return
         for branch in self.branches:
             if name in branch:
-                branch.checkout_commit(name)
+                branch.checkout_commit(name, self.current_commit)
                 self.cur_branch = branch
                 return
         raise CommitNotFoundError(name)
@@ -153,9 +153,25 @@ class CommitIndex:
         return item in self.deleted or item in self.new or item in self.edited
 
 
+def remove_files(files, path):
+    for file in files:
+        full_path = f'{path}\\{file}'
+        os.remove(full_path)
+
+
+def get_files_for_update(new_file_paths, old_file_paths):
+    result = []
+    for key in new_file_paths:
+        if key in old_file_paths and new_file_paths[key] == old_file_paths[key]:
+            continue
+        result.append(key)
+    return result
+
+
 class CommitCVS:
     def __init__(self, name, commit_index: CommitIndex, original_path, saver_folder, previous_commit=None):
         self.name = name
+        self.directory = original_path
         self.index = commit_index
         self.files_and_paths = dict()
         if previous_commit is None:
@@ -163,7 +179,7 @@ class CommitCVS:
         else:
             self.set_files_dict_with_previous(previous_commit, saver_folder)
         self.create_folders(saver_folder)
-        self.load_files_in_folder(original_path)
+        self.load_files_in_folder()
 
     def set_files_dict_without_previous(self, folder):
         for file in self.index.new:
@@ -185,13 +201,21 @@ class CommitCVS:
         for path in dirs:
             create_folders_from_dir(path, folder)
 
-    def load_files_in_folder(self, original_folder):
+    def load_files_in_folder(self):
         for file in self.index.new + self.index.edited:
-            old_path = f'{original_folder}\\{file}'
+            old_path = f'{self.directory}\\{file}'
             shutil.copy2(old_path, self.files_and_paths[file])
 
-    def checkout(self):
-        pass
+    def checkout(self, old_commit):
+        current_all_files = set(self.files_and_paths.keys())
+        old_all_files = set(old_commit.files_and_paths.keys())
+
+        files_to_remove = old_all_files.difference(current_all_files)
+        remove_files(files_to_remove, self.directory)
+
+        files_to_update = get_files_for_update(self.files_and_paths, old_commit.files_and_paths)
+        for file in files_to_update:
+            shutil.copy2(self.files_and_paths[file], f'{self.directory}\\{file}')
 
 
 class BranchCVS:
@@ -220,13 +244,13 @@ class BranchCVS:
                 return True
         return False
 
-    def checkout_commit(self, commit_name):
+    def checkout_commit(self, commit_name, old_commit):
         if commit_name == self.current_commit.name:
             return
         for i in range(len(self.commits)):
-            if self.commits[i] == commit_name:
+            if self.commits[i].name == commit_name:
                 self.current_number = i
-                self.current_commit.checkout()
+                self.current_commit.checkout(old_commit)
                 return
         raise CommitNotFoundError(commit_name)
 
