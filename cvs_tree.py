@@ -1,3 +1,4 @@
+from detached_head_error import DetachedHeadError
 import os
 import shutil
 
@@ -77,15 +78,17 @@ class TreeCVS:
                     raise FileNotFoundError(name, name, name)
         return commit_index
 
-    def create_commit(self, name, commit_index, detached=False):
-        if not detached:
+    def create_commit(self, name, commit_index, initial=False):
+        if not initial:
+            if not self.cur_branch.last_commit_taken:
+                raise DetachedHeadError
             previous = self.current_commit
         else:
             previous = None
         com_path = f'{self.path}\\{COMMITS_PATH}\\{self.next_commit_folder_name}'
         os.mkdir(com_path)
         commit = CommitCVS(name, commit_index, self.path, com_path, previous)
-        if not detached:
+        if not initial:
             self.cur_branch.add_commit(commit)
 
         self.commits_count += 1
@@ -182,6 +185,10 @@ class BranchCVS:
         self.commits = [root]
         self.current = root
         self.current_number = 0
+
+    @property
+    def last_commit_taken(self):
+        return self.current_number == len(self.commits)
 
     def add_commit(self, commit, checkout=True):
         self.commits.append(commit)

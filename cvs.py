@@ -1,5 +1,6 @@
 from cvs_dialogs import *
 from cvs_tree import *
+from detached_head_error import DetachedHeadError
 import os
 import pickle
 import colorama
@@ -16,6 +17,14 @@ def _delete_last_comma(x):
         return x[:-1]
     else:
         return x
+
+
+def _parse_message(message):
+    parsed_message = message.split('\'')
+    if len(parsed_message) != 3 \
+            or (len(parsed_message) == 3 and (len(parsed_message[0]) > 0 or len(parsed_message[2]) > 0)):
+        raise ValueError
+    return parsed_message[1]
 
 
 class CloneVersionSystem:
@@ -67,20 +76,19 @@ class CloneVersionSystem:
             print('Не добавлены изменения. Используйте команду \'add\'')
             return
         if message is None:
-            name = self.cvs_tree.next_commit_folder_name
-            self.cvs_tree.create_commit(name, self.commit_index)
-            print(f'Коммит {name} создан')
+            message = self.cvs_tree.next_commit_folder_name
         else:
-            parsed_message = message.split('\'')
-            if len(parsed_message) != 3 \
-                    or (len(parsed_message) == 3 and (len(parsed_message[0]) > 0 or len(parsed_message[2]) > 0)):
+            try:
+                message = _parse_message(message)
+            except ValueError:
                 print('Неверно указано сообщение к коммиту')
                 return
-            else:
-                message = parsed_message[1]
-                self.cvs_tree.create_commit(message, self.commit_index)
-                print(f'Коммит {message} создан')
-        self.commit_index = None
+        try:
+            self.cvs_tree.create_commit(message, self.commit_index)
+            print(f'Коммит {message} создан')
+            self.commit_index = None
+        except DetachedHeadError as e:
+            print(e)
 
     def status(self):
         all_changes = set(self.cvs_tree.create_commit_index_with_all().all_files)
