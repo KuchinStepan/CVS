@@ -129,6 +129,7 @@ class CloneVersionSystem:
             print('Ветвь с таким именем уже существует')
             return
         self.cvs_tree.create_branch(name)
+        self.save_in_saver()
 
     def checkout_branch(self, name):
         try:
@@ -177,3 +178,4 @@ class CloneVersionSystem:
         while self.running:
             command = input('>>> ')
             self.do_command(command)
+            print(f'\nBranch: {self.cvs_tree.cur_branch}\nCommit: {self.cvs_tree.current_commit}')
