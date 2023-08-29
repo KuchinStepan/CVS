@@ -1,6 +1,6 @@
 from cvs_dialogs import *
 from cvs_tree import *
-from detached_head_error import DetachedHeadError, CommitNotFoundError
+from cvs_errors import *
 import os
 import pickle
 import colorama
@@ -31,7 +31,7 @@ class CloneVersionSystem:
     def __init__(self):
         self.running = False
         self.main_folder = None
-        self.cvs_tree = None
+        self.cvs_tree: TreeCVS = None
         self.saved_cvs = None
         self.cvs_active = False
         self.commit_index = None
@@ -106,6 +106,9 @@ class CloneVersionSystem:
             except ValueError:
                 print('Неверно указано сообщение к коммиту')
                 return
+            if message in self.cvs_tree.used_commits_name:
+                print('Коммит с таким именем уже существует')
+                return
         try:
             self.cvs_tree.create_commit(message, self.commit_index)
             print(f'Коммит {message} создан')
@@ -117,7 +120,21 @@ class CloneVersionSystem:
     def checkout_commit(self, name):
         try:
             self.cvs_tree.checkout_commit(name)
+            self.save_in_saver()
         except CommitNotFoundError as e:
+            print(e)
+
+    def create_branch(self, name):
+        if name in self.cvs_tree.used_branch_names:
+            print('Ветвь с таким именем уже существует')
+            return
+        self.cvs_tree.create_branch(name)
+
+    def checkout_branch(self, name):
+        try:
+            self.cvs_tree.checkout_branch(name)
+            self.save_in_saver()
+        except BranchNotFoundError as e:
             print(e)
 
     def do_command(self, command):
@@ -139,8 +156,12 @@ class CloneVersionSystem:
                 self.commit()
             case['commit', '-m', message]:
                 self.commit(message)
+            case['branch', name]:
+                self.create_branch(name)
             case['checkout', name]:
                 self.checkout_commit(name)
+            case['checkout', 'branch', name]:
+                self.checkout_branch(name)
             case _:
                 print('Неверно введена команда')
 

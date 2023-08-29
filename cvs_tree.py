@@ -1,4 +1,4 @@
-from detached_head_error import DetachedHeadError, CommitNotFoundError
+from cvs_errors import *
 import os
 import shutil
 
@@ -37,6 +37,7 @@ def create_folders_from_dir(directory: str, path):
 
 class TreeCVS:
     def __init__(self, path):
+        self.used_commits_name = set()
         self.path = path
         self.commits_count = 0
         commit_index = self.create_commit_index_with_all(True)
@@ -44,6 +45,9 @@ class TreeCVS:
         self.main = BranchCVS('main', initial_commit)
         self.cur_branch = self.main
         self.branches = [self.main]
+
+        self.used_branch_names = set()
+        self.used_branch_names.add('main')
 
     @property
     def commit_number(self):
@@ -103,6 +107,7 @@ class TreeCVS:
             self.cur_branch.add_commit(commit)
 
         self.commits_count += 1
+        self.used_commits_name.add(name)
         return commit
 
     def checkout_commit(self, name):
@@ -116,18 +121,23 @@ class TreeCVS:
                 return
         raise CommitNotFoundError(name)
 
+    def create_branch(self, name):
+        branch = BranchCVS(name, self.current_commit)
+        self.branches.append(branch)
+        self.cur_branch = branch
+        self.used_branch_names.add(name)
+
     def checkout_branch(self, branch_name):
         """Делает переход на ветку, при этом так же переходит на последний коммит в этой ветке"""
-        i = -1
-        for j in range(len(self.branches)):
-            if self.branches[j] == branch_name:
-                i = j
+        old_commit = self.current_commit
+        if self.cur_branch.name == branch_name:
+            return
+        for i in range(len(self.branches)):
+            if self.branches[i].name == branch_name:
                 self.cur_branch = self.branches[i]
-                self.cur_branch.checkout_last()
-                break
-        if i == -1:
-            return None
-        return self.current_commit
+                self.cur_branch.checkout_last(old_commit)
+                return
+        raise BranchNotFoundError(branch_name)
 
 
 class CommitIndex:
@@ -181,6 +191,9 @@ class CommitCVS:
         self.create_folders(saver_folder)
         self.load_files_in_folder()
 
+    def __str__(self):
+        return f'{self.name}'
+
     def set_files_dict_without_previous(self, folder):
         for file in self.index.new:
             self.files_and_paths[file] = f'{folder}\\{file}'
@@ -225,6 +238,9 @@ class BranchCVS:
         self.commits = [root]
         self.current_number = 0
 
+    def __str__(self):
+        return f'Name: {self.name}; Last commit: {self.current_commit}'
+
     @property
     def current_commit(self):
         return self.commits[self.current_number]
@@ -254,6 +270,6 @@ class BranchCVS:
                 return
         raise CommitNotFoundError(commit_name)
 
-    def checkout_last(self):
+    def checkout_last(self, previous_commit):
         self.current_number = len(self.commits) - 1
-        return self.current
+        self.current_commit.checkout(previous_commit)

@@ -13,3 +13,11 @@ class CommitNotFoundError(Exception):
 
     def __str__(self):
         return f'Коммит {self.commit_name} не найден'
+
+
+class BranchNotFoundError(Exception):
+    def __init__(self, branch_name):
+        self.branch_name = branch_name
+
+    def __str__(self):
+        return f'Ветвь {self.branch_name} не найдена'
