@@ -27,6 +27,7 @@ def get_all_files(path, directory=''):
 class TreeCVS:
     def __init__(self, path):
         self.used_commits_name = set()
+        self.tags = dict()
         self.path = path
         self.commits_count = 0
         commit_index = self.create_commit_index_with_all(True)

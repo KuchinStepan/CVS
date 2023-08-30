@@ -124,6 +124,25 @@ class CloneVersionSystem:
         except CommitNotFoundError as e:
             print(e)
 
+    def create_tag(self, message):
+        try:
+            message = _parse_message(message)
+        except ValueError:
+            print('Неверно указано сообщение к тегу')
+            return
+        if message in self.cvs_tree.tags:
+            print('Тег с таким именем уже существует')
+            return
+        self.cvs_tree.tags[message] = self.cvs_tree.current_commit.name
+
+    def checkout_tag(self, name):
+        if name in self.cvs_tree.tags:
+            commit = self.cvs_tree.tags[name]
+            self.cvs_tree.checkout_commit(commit)
+            self.save_in_saver()
+        else:
+            print(f'Тег {name} не найден')
+
     def create_branch(self, name):
         if name in self.cvs_tree.used_branch_names:
             print('Ветвь с таким именем уже существует')
@@ -167,6 +186,14 @@ class CloneVersionSystem:
         for file in commit.index.deleted:
             print(colorama.Fore.RED + '- ' + file)
 
+    def show_tags(self):
+        if len(self.cvs_tree.tags) == 0:
+            print('Теги не добавлены')
+        else:
+            print('Список тегов:  (тег: коммит)')
+            for tag in self.cvs_tree.tags:
+                print(f'-- {tag}: {self.cvs_tree.tags[tag]}')
+
     def do_command(self, command):
         if command != 'init' and not self.cvs_active:
             print('CVS не создан в текущей директории. Используйте команду \'init\'')
@@ -190,9 +217,13 @@ class CloneVersionSystem:
                 self.commit(message)
             case['branch', name]:
                 self.create_branch(name)
+            case['tag', message]:
+                self.create_tag(message)
 
             case['checkout', name]:
                 self.checkout_commit(name)
+            case['checkout', '-t', name]:
+                self.checkout_tag(name)
             case['checkout', '-b', name]:
                 self.checkout_branch(name)
 
@@ -200,6 +231,9 @@ class CloneVersionSystem:
                 self.log_commit()
             case['log', name]:
                 self.log_commit(name)
+
+            case['show', '-t']:
+                self.show_tags()
             case _:
                 print('Неверно введена команда')
 
