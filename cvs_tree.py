@@ -137,7 +137,7 @@ class BranchCVS:
         self.current_number = 0
 
     def __str__(self):
-        return f'Name: {self.name}; Last commit: {self.commits[-1]}'
+        return f'{self.name}'
 
     @property
     def current_commit(self):

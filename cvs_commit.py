@@ -1,3 +1,4 @@
+import datetime
 import shutil
 import os
 
@@ -54,6 +55,7 @@ def remove_files(files, path):
 class CommitCVS:
     def __init__(self, name, commit_index: CommitIndex, original_path, saver_folder, previous_commit=None):
         self.name = name
+        self.time = datetime.datetime.now()
         self.directory = original_path
         self.index = commit_index
         self.files_and_paths = dict()

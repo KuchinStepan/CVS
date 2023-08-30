@@ -138,6 +138,35 @@ class CloneVersionSystem:
         except BranchNotFoundError as e:
             print(e)
 
+    def _find_commit_and_branch(self, name):
+        for branch in self.cvs_tree.branches:
+            if name in branch:
+                for commit in branch.commits:
+                    if name == commit.name:
+                        return commit, branch.name
+        raise CommitNotFoundError(name)
+
+    def log_commit(self, name=None):
+        if name is None:
+            commit = self.cvs_tree.current_commit
+            print(f'Ветка:  {self.cvs_tree.cur_branch}')
+        else:
+            try:
+                commit, branch_name = self._find_commit_and_branch(name)
+                print(f'Ветка:  {branch_name}')
+            except CommitNotFoundError as e:
+                print(e)
+                return
+        print(f'Коммит: {commit.name}')
+        print(f'Создан: {commit.time.date()}  {commit.time.strftime("%H:%M:%S")}')
+        print('Изменения:')
+        for file in commit.index.new:
+            print(colorama.Fore.GREEN + '+ ' + file)
+        for file in commit.index.edited:
+            print(colorama.Fore.YELLOW + 'Δ ' + file)
+        for file in commit.index.deleted:
+            print(colorama.Fore.RED + '- ' + file)
+
     def do_command(self, command):
         if command != 'init' and not self.cvs_active:
             print('CVS не создан в текущей директории. Используйте команду \'init\'')
@@ -147,22 +176,30 @@ class CloneVersionSystem:
                 self.stop()
             case['init']:
                 self.init()
+
             case['status']:
                 self.status()
             case['add', '.']:
                 self.commit_index = self.cvs_tree.create_commit_index_with_all()
             case['add', *names]:
                 self.add_by_names(names)
+
             case['commit']:
                 self.commit()
             case['commit', '-m', message]:
                 self.commit(message)
             case['branch', name]:
                 self.create_branch(name)
+
             case['checkout', name]:
                 self.checkout_commit(name)
-            case['checkout', 'branch', name]:
+            case['checkout', '-b', name]:
                 self.checkout_branch(name)
+
+            case['log']:
+                self.log_commit()
+            case['log', name]:
+                self.log_commit(name)
             case _:
                 print('Неверно введена команда')
 
@@ -178,4 +215,4 @@ class CloneVersionSystem:
         while self.running:
             command = input('>>> ')
             self.do_command(command)
-            print(f'\nBranch: {self.cvs_tree.cur_branch}\nCommit: {self.cvs_tree.current_commit}')
+            # print(f'\nBranch: {self.cvs_tree.cur_branch}\nCommit: {self.cvs_tree.current_commit}')
