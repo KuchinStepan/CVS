@@ -260,7 +260,7 @@ class CloneVersionSystem:
     def run(self):
         print('Добро пожаловать в систему контроля версий CVS')
         self.running = True
-        self.main_folder = read_main_folder()
+        self.main_folder = read_recently_used_folder()
         self.reload_saver()
         if os.path.exists(f'{self.main_folder}\\{CVS_PATH}'):
             self.cvs_active = True
