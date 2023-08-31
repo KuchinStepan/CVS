@@ -2,7 +2,6 @@ import os
 
 
 def read_main_folder():
-    return 'C:\\Users\\Степан\\Desktop\\Python\\cvs-test'
     print('Введите директорию, в которой хотите работать с ситемой контроля версий')
     while True:
         path = input()

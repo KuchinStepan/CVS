@@ -1,6 +1,7 @@
 from cvs_errors import *
 from cvs_commit import *
 import os
+import hashlib
 
 
 CVS_PATH = '.cvs'
@@ -22,6 +23,12 @@ def get_all_files(path, directory=''):
             result_list += get_all_files(path, file)
             result_list.remove(file)
     return result_list
+
+
+def get_file_hash(file_path):
+    with open(file_path, 'rb') as f:
+        content = f.read()
+        return hashlib.md5(content)
 
 
 class TreeCVS:
@@ -55,6 +62,18 @@ class TreeCVS:
         last_files = set(self.current_commit.files_and_paths.keys())
         return list(all_files.difference(last_files))
 
+    def find_edited_files(self, all_files: set):
+        current_commit = self.current_commit
+        last_files = set(current_commit.files_and_paths.keys())
+        files_for_checking = set(all_files.union(last_files))
+        result = []
+        for file in files_for_checking:
+            previous_hash = get_file_hash(current_commit.files_and_paths[file]).digest()
+            current_hash = get_file_hash(f'{self.path}\\{file}').digest()
+            if previous_hash != current_hash:
+                result.append(file)
+        return result
+
     def find_deleted_files(self, all_files):
         last_files = set(self.current_commit.files_and_paths.keys())
         return list(last_files.difference(all_files))
@@ -66,6 +85,7 @@ class TreeCVS:
             return com_index
         all_files = set(get_all_files(self.path))
         com_index.new = self.find_new_files(all_files)
+        com_index.edited = self.find_edited_files(all_files)
         com_index.deleted = self.find_deleted_files(all_files)
         return com_index
 
@@ -147,6 +167,10 @@ class BranchCVS:
     @property
     def last_commit_taken(self):
         return self.current_number == len(self.commits) - 1
+
+    def show_commits(self):
+        for commit in reversed(self.commits):
+            print(f'-- {commit}')
 
     def add_commit(self, commit, checkout=True):
         self.commits.append(commit)

@@ -186,6 +186,15 @@ class CloneVersionSystem:
         for file in commit.index.deleted:
             print(colorama.Fore.RED + '- ' + file)
 
+    def show_all_commits(self):
+        for branch in self.cvs_tree.branches:
+            print(f'Коммиты в ветви {branch}:')
+            branch.show_commits()
+
+    def show_commits_in_current_branch(self):
+        print(f'Коммиты в ветви {self.cvs_tree.cur_branch}:')
+        self.cvs_tree.cur_branch.show_commits()
+
     def show_tags(self):
         if len(self.cvs_tree.tags) == 0:
             print('Теги не добавлены')
@@ -194,46 +203,57 @@ class CloneVersionSystem:
             for tag in self.cvs_tree.tags:
                 print(f'-- {tag}: {self.cvs_tree.tags[tag]}')
 
+    def show_branches(self):
+        print('Список веток:')
+        for branch in self.cvs_tree.branches:
+            print(f'-- {branch}')
+
     def do_command(self, command):
         if command != 'init' and not self.cvs_active:
             print('CVS не создан в текущей директории. Используйте команду \'init\'')
             return
         match command.split():
-            case[('0' | 'stop')]:
+            case [('0' | 'stop')]:
                 self.stop()
-            case['init']:
+            case ['init']:
                 self.init()
 
-            case['status']:
+            case ['status']:
                 self.status()
-            case['add', '.']:
+            case ['add', '.']:
                 self.commit_index = self.cvs_tree.create_commit_index_with_all()
-            case['add', *names]:
+            case ['add', *names]:
                 self.add_by_names(names)
 
-            case['commit']:
+            case ['commit']:
                 self.commit()
-            case['commit', '-m', message]:
+            case ['commit', '-m', message]:
                 self.commit(message)
-            case['branch', name]:
+            case ['branch', name]:
                 self.create_branch(name)
-            case['tag', message]:
+            case ['tag', message]:
                 self.create_tag(message)
 
-            case['checkout', name]:
+            case ['checkout', name]:
                 self.checkout_commit(name)
-            case['checkout', '-t', name]:
+            case ['checkout', '-t', name]:
                 self.checkout_tag(name)
-            case['checkout', '-b', name]:
+            case ['checkout', '-b', name]:
                 self.checkout_branch(name)
 
-            case['log']:
+            case ['log']:
                 self.log_commit()
-            case['log', name]:
+            case ['log', name]:
                 self.log_commit(name)
 
-            case['show', '-t']:
+            case ['show']:
+                self.show_commits_in_current_branch()
+            case ['show', '-all']:
+                self.show_all_commits()
+            case ['show', '-t']:
                 self.show_tags()
+            case ['show', '-b']:
+                self.show_branches()
             case _:
                 print('Неверно введена команда')
 
