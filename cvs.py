@@ -269,4 +269,3 @@ class CloneVersionSystem:
         while self.running:
             command = input('>>> ')
             self.do_command(command)
-            # print(f'\nBranch: {self.cvs_tree.cur_branch}\nCommit: {self.cvs_tree.current_commit}')

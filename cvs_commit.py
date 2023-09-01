@@ -37,7 +37,7 @@ def create_folders_from_dir(directory: str, path):
             os.mkdir(folder)
 
 
-def get_files_for_update(new_file_paths, old_file_paths):
+def get_files_for_update(new_file_paths, old_file_paths) -> list:
     result = []
     for key in new_file_paths:
         if key in old_file_paths and new_file_paths[key] == old_file_paths[key]:
