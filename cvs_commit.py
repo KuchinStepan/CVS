@@ -13,7 +13,7 @@ class CommitIndex:
     def all_files(self):
         return self.new + self.edited + self.deleted
 
-    def get_dirs(self):
+    def get_dirs(self) -> set:
         dirs = set()
         for file in self.all_files:
             split_name = list(file.split('\\'))
@@ -63,8 +63,6 @@ class CommitCVS:
             self.set_files_dict_without_previous(saver_folder)
         else:
             self.set_files_dict_with_previous(previous_commit, saver_folder)
-        self.create_folders(saver_folder)
-        self.load_files_in_folder()
 
     def __str__(self):
         return f'{self.name}'
@@ -84,15 +82,19 @@ class CommitCVS:
             if file in self.files_and_paths:
                 self.files_and_paths.pop(file)
 
-    def create_folders(self, folder):
+    def _create_folders(self, folder):
         dirs = self.index.get_dirs()
         for path in dirs:
             create_folders_from_dir(path, folder)
 
-    def load_files_in_folder(self):
+    def _load_files_in_folder(self):
         for file in self.index.new + self.index.edited:
             old_path = f'{self.directory}\\{file}'
             shutil.copy2(old_path, self.files_and_paths[file])
+
+    def save_files_in_folders(self, folder):
+        self._create_folders(folder)
+        self._load_files_in_folder()
 
     def checkout(self, old_commit):
         if self.name == old_commit.name:

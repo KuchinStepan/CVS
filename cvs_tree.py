@@ -113,6 +113,7 @@ class TreeCVS:
         com_path = f'{self.path}\\{COMMITS_PATH}\\{self.next_commit_folder_name}'
         os.mkdir(com_path)
         commit = CommitCVS(name, commit_index, self.path, com_path, previous)
+        commit.save_files_in_folders(com_path)
         if not initial:
             self.cur_branch.add_commit(commit)
 
