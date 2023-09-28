@@ -65,7 +65,7 @@ class TreeCVS:
     def find_edited_files(self, all_files: set):
         current_commit = self.current_commit
         last_files = set(current_commit.files_and_paths.keys())
-        files_for_checking = set(all_files.union(last_files))
+        files_for_checking = set(all_files.intersection(last_files))
         result = []
         for file in files_for_checking:
             previous_hash = get_file_hash(current_commit.files_and_paths[file]).digest()
