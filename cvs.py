@@ -208,6 +208,32 @@ class CloneVersionSystem:
         for branch in self.cvs_tree.branches:
             print(f'-- {branch}')
 
+    def diff_in_file(self, file_name):
+        try:
+            diff_generator = self.cvs_tree.get_diff_in_file(file_name)
+            show_formatted_diff_generator(diff_generator)
+        except FileDiffError as e:
+            print(e)
+
+    def diff_all(self):
+        try:
+            diff_generators = self.cvs_tree.get_all_diff()
+            first = True
+            for generator in diff_generators:
+                if not first:
+                    print()
+                show_formatted_diff_generator(generator)
+                first = False
+        except FileDiffError as e:
+            print(e)
+
+    def diff_between_commits(self, com_1, com_2, file_name):
+        try:
+            diff_generator = self.cvs_tree.get_diff_between_commits(com_1, com_2, file_name)
+            show_formatted_diff_generator(diff_generator)
+        except FileDiffError as e:
+            print(e)
+
     def do_command(self, command):
         if command != 'init' and not self.cvs_active:
             print('CVS не создан в текущей директории. Используйте команду \'init\'')
@@ -254,6 +280,14 @@ class CloneVersionSystem:
                 self.show_tags()
             case ['show', '-b']:
                 self.show_branches()
+
+            case ['diff']:
+                self.diff_all()
+            case ['diff', file_name]:
+                self.diff_in_file(file_name)
+            case ['diff', com_1, com_2, file_name]:
+                self.diff_between_commits(com_1, com_2, file_name)
+
             case _:
                 print('Неверно введена команда')
 

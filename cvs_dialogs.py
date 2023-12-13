@@ -1,5 +1,9 @@
 import os
 import pickle
+import colorama
+
+
+colorama.init(autoreset=True)
 
 
 FOLDERS_SAVER = 'recently_used_folders.pickle'
@@ -49,3 +53,16 @@ def read_main_folder():
             return path
         else:
             print(f'Директория {path} не найдена!')
+
+
+def show_formatted_diff_generator(generator):
+    for i in generator:
+        i = i.replace('\n', '')
+        if i[0] == '+':
+            print(colorama.Fore.GREEN + i)
+        elif i[0] == '-' and i[1] == ' ':
+            print(colorama.Fore.RED + i)
+        elif i[0] == '!':
+            print(colorama.Fore.YELLOW + i)
+        else:
+            print(i)

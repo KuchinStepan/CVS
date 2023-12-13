@@ -2,6 +2,7 @@ from cvs_errors import *
 from cvs_commit import *
 import os
 import hashlib
+import difflib
 
 
 CVS_PATH = '.cvs'
@@ -29,6 +30,16 @@ def get_file_hash(file_path):
     with open(file_path, 'rb') as f:
         content = f.read()
         return hashlib.md5(content)
+
+
+def get_files_diff(previous, current, short_name):
+    with open(previous, 'r') as f:
+        prev_lines = list(f.readlines())
+    with open(current, 'r') as f:
+        cur_lines = list(f.readlines())
+
+    return difflib.context_diff(prev_lines, cur_lines, fromfile=f'before {short_name}',
+                                tofile=f'after {short_name}', n=1, lineterm='\n')
 
 
 class TreeCVS:
@@ -149,6 +160,60 @@ class TreeCVS:
                 self.cur_branch.checkout_last(old_commit)
                 return
         raise BranchNotFoundError(branch_name)
+
+    def get_diff_in_file(self, file_name):
+        full_path = f'{self.path}\\{file_name}'
+        if not os.path.exists(full_path):
+            raise FileDiffError(f'Файл {file_name} не найден')
+
+        edited_files = self.find_edited_files(set(get_all_files(self.path)))
+
+        if file_name in edited_files:
+            return get_files_diff(self.current_commit.files_and_paths[file_name], full_path, file_name)
+        elif file_name in self.current_commit.index.edited:
+            if self.cur_branch.current_number > 0:
+                file_1 = self.cur_branch.current_commit.files_and_paths[file_name]
+                file_2 = self.cur_branch.commits[self.cur_branch.current_number - 1].files_and_paths[file_name]
+                return get_files_diff(file_2, file_1, file_name)
+            raise FileDiffError(f'Файл {file_name} в данной ветке не изменялся')
+        else:
+            raise FileDiffError(f'Файл {file_name} не изменялся')
+
+    def get_diff_between_commits(self, com_1, com_2, file):
+        prev_path = ''
+        cur_path = ''
+        for branch in self.branches:
+            for commit in branch.commits:
+                if commit.name == com_1:
+                    if file in commit.files_and_paths:
+                        prev_path = commit.files_and_paths[file]
+                    else:
+                        raise FileDiffError(f'Файл {file} не существует в коммите {com_1}')
+                if commit.name == com_2:
+                    if file in commit.files_and_paths:
+                        cur_path = commit.files_and_paths[file]
+                    else:
+                        raise FileDiffError(f'Файл {file} не существует в коммите {com_2}')
+        if cur_path == '':
+            raise FileDiffError(f'Коммит {com_2} не найден')
+        if prev_path == '':
+            raise FileDiffError(f'Коммит {com_1} не найден')
+        return get_files_diff(prev_path, cur_path, file)
+
+    def get_all_diff(self):
+        edited_files = self.find_edited_files(set(get_all_files(self.path)))
+
+        if edited_files:
+            for file_name in edited_files:
+                full_path = f'{self.path}\\{file_name}'
+                yield get_files_diff(self.current_commit.files_and_paths[file_name], full_path, file_name)
+        elif self.cur_branch.current_number > 0:
+            for file_name in self.current_commit.index.edited:
+                file_1 = self.cur_branch.current_commit.files_and_paths[file_name]
+                file_2 = self.cur_branch.commits[self.cur_branch.current_number - 1].files_and_paths[file_name]
+                yield get_files_diff(file_2, file_1, file_name)
+        else:
+            raise FileDiffError('Измененных файлов для текущего коммита не найдено')
 
 
 class BranchCVS:
